@@ -77,8 +77,11 @@ where
     H: Handler,
 {
     init_logger(args.debug);
-    let mut handler = H::new(args.clone())?;
+    let handler = H::new(args.clone())?;
+    watch_with_handler(args, handler)
+}
 
+pub fn watch_with_handler<H: Handler>(args: Args, mut handler: H) -> Result<()> {
     let mut paths = vec![];
     for path in args.paths {
         paths.push(
