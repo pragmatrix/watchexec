@@ -14,7 +14,7 @@ use std::{
     fs::canonicalize,
     io::Write,
     sync::{
-        mpsc::{channel, Receiver},
+        mpsc::{channel, Receiver, Sender},
         Arc, RwLock,
     },
     time::Duration,
@@ -78,10 +78,14 @@ where
 {
     init_logger(args.debug);
     let handler = H::new(args.clone())?;
-    watch_with_handler(args, handler)
+    watch_with_handler(args, channel(), handler)
 }
 
-pub fn watch_with_handler<H: Handler>(args: Args, mut handler: H) -> Result<()> {
+pub fn watch_with_handler<H: Handler>(
+    args: Args,
+    (tx, rx): (Sender<Event>, Receiver<Event>),
+    mut handler: H,
+) -> Result<()> {
     let mut paths = vec![];
     for path in args.paths {
         paths.push(
@@ -93,7 +97,6 @@ pub fn watch_with_handler<H: Handler>(args: Args, mut handler: H) -> Result<()> 
     let gitignore = gitignore::load(if args.no_vcs_ignore { &[] } else { &paths });
     let filter = NotificationFilter::new(&args.filters, &args.ignores, gitignore)?;
 
-    let (tx, rx) = channel();
     let poll = args.poll.clone();
     #[cfg(target_os = "linux")]
     let poll_interval = args.poll_interval.clone();
